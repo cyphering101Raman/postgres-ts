@@ -1,0 +1,17 @@
+name: to-do-auth-postgre-ts
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: postgres-heroic
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: mydb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
