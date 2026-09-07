@@ -1,9 +1,11 @@
 import express from "express";
-import { db } from "./db/index.js";
+import userRouter from "./routes/user.routes.js"
+import cookieParser from "cookie-parser";
 
 const app = express();
 
 app.use(express.json());
+app.use(cookieParser());
 
 app.get("/", (req, res) => {
   res.json(
@@ -11,7 +13,9 @@ app.get("/", (req, res) => {
       message: "Hello darling"
     }
   )
-})
+});
+
+app.use('/api/v1/user', userRouter);
 
 
 export default app;

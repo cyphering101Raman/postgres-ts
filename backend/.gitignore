@@ -33,3 +33,11 @@ Thumbs.db
 # Docker
 .dockerignore
 docker-compose.override.yml
+
+# Databases / Drizzle
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+pgdata/
+.data/
