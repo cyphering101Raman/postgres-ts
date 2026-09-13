@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Endpoint Tester</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-primary: #0b0d17;
+      --bg-secondary: #111427;
+      --bg-card: rgba(255, 255, 255, 0.03);
+      --bg-card-hover: rgba(255, 255, 255, 0.055);
+      --bg-input: rgba(255, 255, 255, 0.05);
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-input: rgba(255, 255, 255, 0.12);
+      --border-focus: rgba(6, 182, 212, 0.5);
+      --text-primary: #e2e8f0;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-cyan: #06b6d4;
+      --accent-violet: #8b5cf6;
+      --accent-gradient: linear-gradient(135deg, #06b6d4, #8b5cf6);
+      --success: #22c55e;
+      --error: #ef4444;
+      --radius: 12px;
+      --radius-sm: 8px;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* ── Scrollbar ─────────────────────────── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+    /* ── Header ────────────────────────────── */
+    .header {
+      padding: 20px 32px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      backdrop-filter: blur(24px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(11, 13, 23, 0.85);
+    }
+    .header h1 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      background: var(--accent-gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .header .subtitle {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(34,197,94,0.4); }
+      50% { opacity: 0.6; box-shadow: 0 0 0 6px rgba(34,197,94,0); }
+    }
+
+    /* ── Tabs ───────────────────────────────── */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      padding: 12px 32px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--bg-primary);
+    }
+    .tab {
+      padding: 10px 24px;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .tab:hover { color: var(--text-secondary); background: var(--bg-card); }
+    .tab.active { color: var(--text-primary); background: var(--bg-card); border-color: var(--border-subtle); }
+
+    /* ── Layout ─────────────────────────────── */
+    .main {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      min-height: calc(100vh - 120px);
+    }
+    .panel { padding: 24px 32px; overflow-y: auto; }
+    .panel-left { border-right: 1px solid var(--border-subtle); }
+    .panel-right { background: var(--bg-secondary); }
+
+    @media (max-width: 860px) {
+      .main { grid-template-columns: 1fr; }
+      .panel-left { border-right: none; border-bottom: 1px solid var(--border-subtle); }
+      .panel { padding: 16px; }
+    }
+
+    /* ── Cards ──────────────────────────────── */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 16px;
+      transition: all 0.2s ease;
+    }
+    .card:hover { background: var(--bg-card-hover); border-color: rgba(255,255,255,0.12); }
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .card-method {
+      font-size: 0.65rem;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 3px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+    }
+    .method-post   { background: rgba(34,197,94,0.15);  color: #4ade80; }
+    .method-get    { background: rgba(6,182,212,0.15);   color: #22d3ee; }
+    .method-delete { background: rgba(239,68,68,0.15);   color: #f87171; }
+    .card-endpoint {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+      margin-bottom: 18px;
+    }
+
+    /* ── Forms ──────────────────────────────── */
+    .form-group { margin-bottom: 14px; }
+    .form-group label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-input);
+      background: var(--bg-input);
+      color: var(--text-primary);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.88rem;
+      transition: all 0.2s ease;
+      outline: none;
+    }
+    .form-group input:focus,
+    .form-group textarea:focus {
+      border-color: var(--border-focus);
+      box-shadow: 0 0 0 3px rgba(6,182,212,0.1);
+    }
+    .form-group input::placeholder,
+    .form-group textarea::placeholder { color: var(--text-muted); }
+    .form-group textarea { resize: vertical; min-height: 64px; }
+
+    /* ── Buttons ────────────────────────────── */
+    .btn {
+      padding: 10px 20px;
+      border-radius: var(--radius-sm);
+      border: none;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.84rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+    .btn-primary {
+      background: var(--accent-gradient);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      opacity: 0.92;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 18px rgba(6,182,212,0.3);
+    }
+    .btn-secondary {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      border: 1px solid var(--border-subtle);
+    }
+    .btn-secondary:hover { background: var(--bg-card-hover); border-color: rgba(255,255,255,0.15); }
+    .btn-danger {
+      background: rgba(239,68,68,0.12);
+      color: #f87171;
+      border: 1px solid rgba(239,68,68,0.2);
+    }
+    .btn-danger:hover { background: rgba(239,68,68,0.22); }
+    .btn-sm { padding: 6px 14px; font-size: 0.75rem; }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; }
+    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    .inline-form { display: flex; gap: 10px; align-items: flex-end; }
+    .inline-form .form-group { margin-bottom: 0; }
+    .inline-form .form-group input { width: 72px; }
+
+    .section-header {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.6px;
+      color: var(--text-muted);
+      margin: 20px 0 14px 0;
+    }
+    .section-header:first-child { margin-top: 4px; }
+
+    /* ── Spinner ────────────────────────────── */
+    .spinner {
+      width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,0.25);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.55s linear infinite;
+      display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Response Viewer ───────────────────── */
+    .response-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+    .response-title {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.6px;
+      color: var(--text-muted);
+    }
+    .response-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .response-method-url {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.84rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+    .response-status {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 4px;
+    }
+    .s2xx { background: rgba(34,197,94,0.15);  color: #4ade80; }
+    .s4xx { background: rgba(245,158,11,0.15); color: #fbbf24; }
+    .s5xx { background: rgba(239,68,68,0.15);  color: #f87171; }
+    .s0   { background: rgba(239,68,68,0.15);  color: #f87171; }
+    .response-time {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .response-body {
+      background: rgba(0,0,0,0.35);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      overflow-x: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      line-height: 1.75;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 420px;
+      overflow-y: auto;
+    }
+
+    /* JSON syntax colors */
+    .jk { color: #7dd3fc; }
+    .js { color: #86efac; }
+    .jn { color: #c4b5fd; }
+    .jb { color: #fbbf24; }
+    .jl { color: #f87171; }
+
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 280px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+    .empty-state .icon { font-size: 2.8rem; margin-bottom: 14px; opacity: 0.3; }
+    .empty-state p { font-size: 0.88rem; }
+
+    /* ── History ────────────────────────────── */
+    .history-divider {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.6px;
+      color: var(--text-muted);
+      margin: 28px 0 12px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border-subtle);
+    }
+    .history-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.78rem;
+      font-family: 'JetBrains Mono', monospace;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      border: 1px solid transparent;
+    }
+    .history-item:hover { background: var(--bg-card); border-color: var(--border-subtle); }
+    .history-item.active { background: var(--bg-card); border-color: rgba(6,182,212,0.3); }
+    .history-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .history-dot.ok  { background: var(--success); }
+    .history-dot.err { background: var(--error); }
+    .history-method { font-weight: 600; width: 52px; flex-shrink: 0; }
+    .history-url {
+      color: var(--text-secondary);
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .history-status { color: var(--text-muted); flex-shrink: 0; }
+    .history-ms { color: var(--text-muted); flex-shrink: 0; font-size: 0.72rem; }
+
+    /* ── Todo list (in left panel) ──────────── */
+    .todo-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      margin-bottom: 8px;
+      transition: all 0.2s ease;
+    }
+    .todo-item:hover { border-color: rgba(255,255,255,0.12); }
+    .todo-info { flex: 1; min-width: 0; }
+    .todo-title { font-weight: 500; font-size: 0.88rem; }
+    .todo-desc { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
+    .todo-meta { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+    .todo-id {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      background: rgba(255,255,255,0.05);
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    .todo-badge {
+      font-size: 0.68rem;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    .badge-done { background: rgba(34,197,94,0.15); color: #4ade80; }
+    .badge-pending { background: rgba(245,158,11,0.15); color: #fbbf24; }
+
+    /* ── Toast ──────────────────────────────── */
+    .toast-container {
+      position: fixed;
+      top: 20px; right: 20px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .toast {
+      padding: 12px 20px;
+      border-radius: var(--radius-sm);
+      font-size: 0.82rem;
+      font-weight: 500;
+      font-family: 'JetBrains Mono', monospace;
+      backdrop-filter: blur(20px);
+      animation: slideIn 0.3s ease, fadeOut 0.3s ease 2.7s forwards;
+      border: 1px solid;
+      pointer-events: auto;
+    }
+    .toast.ok {
+      background: rgba(34,197,94,0.12);
+      border-color: rgba(34,197,94,0.25);
+      color: #4ade80;
+    }
+    .toast.err {
+      background: rgba(239,68,68,0.12);
+      border-color: rgba(239,68,68,0.25);
+      color: #f87171;
+    }
+    @keyframes slideIn {
+      from { transform: translateX(80px); opacity: 0; }
+      to   { transform: translateX(0);    opacity: 1; }
+    }
+    @keyframes fadeOut {
+      to { opacity: 0; transform: translateY(-8px); }
+    }
+
+    .tab-content        { display: none; }
+    .tab-content.active { display: block; }
+  </style>
+</head>
+<body>
+  <div class="toast-container" id="toastBox"></div>
+
+  <!-- ─── Header ──────────────────────────────── -->
+  <header class="header">
+    <div>
+      <h1>⚡ API Endpoint Tester</h1>
+      <div class="subtitle">Express · Drizzle · PostgreSQL</div>
+    </div>
+    <div class="status-indicator">
+      <span class="status-dot"></span>
+      localhost:3000
+    </div>
+  </header>
+
+  <!-- ─── Tabs ────────────────────────────────── -->
+  <nav class="tabs">
+    <button class="tab active" data-tab="auth">🔐 Authentication</button>
+    <button class="tab" data-tab="todos">📝 Todos</button>
+  </nav>
+
+  <!-- ─── Main ────────────────────────────────── -->
+  <div class="main">
+
+    <!-- ── Left Panel ─────────────────────────── -->
+    <div class="panel panel-left">
+
+      <!-- Auth ──────────────────────────────────── -->
+      <div class="tab-content active" id="tab-auth">
+
+        <div class="section-header">Register New User</div>
+        <div class="card">
+          <div class="card-title">
+            <span class="card-method method-post">POST</span> Create Account
+          </div>
+          <div class="card-endpoint">/api/v1/user/register</div>
+          <form id="registerForm" onsubmit="return handleRegister(event)">
+            <div class="form-group">
+              <label>Name</label>
+              <input id="reg-name" placeholder="John Doe" required>
+            </div>
+            <div class="form-group">
+              <label>Email</label>
+              <input id="reg-email" type="email" placeholder="john@example.com" required>
+            </div>
+            <div class="form-group">
+              <label>Password</label>
+              <input id="reg-pass" type="password" placeholder="••••••••" required>
+            </div>
+            <button class="btn btn-primary" type="submit">Register →</button>
+          </form>
+        </div>
+
+        <div class="section-header">Login</div>
+        <div class="card">
+          <div class="card-title">
+            <span class="card-method method-post">POST</span> Sign In
+          </div>
+          <div class="card-endpoint">/api/v1/user/login</div>
+          <form id="loginForm" onsubmit="return handleLogin(event)">
+            <div class="form-group">
+              <label>Email</label>
+              <input id="log-email" type="email" placeholder="john@example.com" required>
+            </div>
+            <div class="form-group">
+              <label>Password</label>
+              <input id="log-pass" type="password" placeholder="••••••••" required>
+            </div>
+            <button class="btn btn-primary" type="submit">Login →</button>
+          </form>
+        </div>
+
+        <div class="section-header">Quick Actions</div>
+        <div class="btn-row">
+          <button class="btn btn-secondary" onclick="getMe()">
+            <span class="card-method method-get" style="margin:0">GET</span> Get Profile
+          </button>
+          <button class="btn btn-danger" onclick="doLogout()">
+            <span class="card-method method-post" style="margin:0;background:rgba(239,68,68,0.15);color:#f87171">POST</span> Logout
+          </button>
+        </div>
+      </div>
+
+      <!-- Todos ─────────────────────────────────── -->
+      <div class="tab-content" id="tab-todos">
+
+        <div class="section-header">Create Todo</div>
+        <div class="card">
+          <div class="card-title">
+            <span class="card-method method-post">POST</span> New Todo
+          </div>
+          <div class="card-endpoint">/api/v1/todo/create</div>
+          <form id="todoForm" onsubmit="return handleCreateTodo(event)">
+            <div class="form-group">
+              <label>Title</label>
+              <input id="todo-title" placeholder="Buy groceries" required>
+            </div>
+            <div class="form-group">
+              <label>Description</label>
+              <textarea id="todo-desc" placeholder="Milk, eggs, bread…" required></textarea>
+            </div>
+            <button class="btn btn-primary" type="submit">Create Todo →</button>
+          </form>
+        </div>
+
+        <div class="section-header">Fetch Todos</div>
+        <div class="card">
+          <div class="card-title">
+            <span class="card-method method-get">GET</span> All Todos
+          </div>
+          <div class="card-endpoint">/api/v1/todo/all?page=&amp;limit=</div>
+          <div class="inline-form">
+            <div class="form-group">
+              <label>Page</label>
+              <input id="todo-page" type="number" value="1" min="1">
+            </div>
+            <div class="form-group">
+              <label>Limit</label>
+              <input id="todo-limit" type="number" value="10" min="1">
+            </div>
+            <button class="btn btn-primary" onclick="fetchTodos()">Fetch →</button>
+          </div>
+        </div>
+
+        <div class="section-header">Todo List</div>
+        <div id="todoList">
+          <div class="empty-state" style="height:110px"><p>Click "Fetch" to load your todos</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Right Panel – Response ─────────────── -->
+    <div class="panel panel-right">
+      <div class="response-header">
+        <span class="response-title">Response</span>
+        <button class="btn btn-sm btn-secondary" onclick="clearHistory()">Clear</button>
+      </div>
+
+      <div id="responseViewer">
+        <div class="empty-state">
+          <div class="icon">📡</div>
+          <p>Make an API call to see the response here</p>
+        </div>
+      </div>
+
+      <div id="historyList"></div>
+    </div>
+  </div>
+
+  <!-- ─── Script ──────────────────────────────── -->
+  <script>
+    /* ── state ───────────────────────────────── */
+    const hist = [];
+    let activeIdx = -1;
+
+    /* ── tabs ────────────────────────────────── */
+    document.querySelectorAll('.tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+      });
+    });
+
+    /* ── toast ───────────────────────────────── */
+    function toast(msg, ok = true) {
+      const el = document.createElement('div');
+      el.className = 'toast ' + (ok ? 'ok' : 'err');
+      el.textContent = msg;
+      document.getElementById('toastBox').appendChild(el);
+      setTimeout(() => el.remove(), 3200);
+    }
+
+    /* ── JSON highlight ─────────────────────── */
+    function hl(json) {
+      const s = typeof json === 'string' ? json : JSON.stringify(json, null, 2);
+      return s.replace(
+        /("(\\u[\dA-Fa-f]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?)/g,
+        m => {
+          let c = 'jn';
+          if (/^"/.test(m)) c = /:$/.test(m) ? 'jk' : 'js';
+          else if (/true|false/.test(m)) c = 'jb';
+          else if (/null/.test(m)) c = 'jl';
+          return '<span class="' + c + '">' + m + '</span>';
+        }
+      );
+    }
+
+    function statusCls(s) {
+      if (s >= 200 && s < 300) return 's2xx';
+      if (s >= 400 && s < 500) return 's4xx';
+      if (s === 0) return 's0';
+      return 's5xx';
+    }
+
+    /* ── render response ────────────────────── */
+    function showResponse(e) {
+      document.getElementById('responseViewer').innerHTML =
+        '<div class="response-meta">' +
+          '<span class="response-method-url">' + e.method + ' ' + e.url + '</span>' +
+          '<span class="response-status ' + statusCls(e.status) + '">' + (e.status || 'ERR') + '</span>' +
+          '<span class="response-time">' + e.ms + ' ms</span>' +
+        '</div>' +
+        '<div class="response-body">' + hl(e.data) + '</div>';
+    }
+
+    function renderHistory() {
+      const box = document.getElementById('historyList');
+      if (!hist.length) { box.innerHTML = ''; return; }
+      box.innerHTML = '<div class="history-divider">History</div>' +
+        hist.map((e, i) =>
+          '<div class="history-item' + (i === activeIdx ? ' active' : '') + '" onclick="viewHist(' + i + ')">' +
+            '<span class="history-dot ' + (e.status < 400 && e.status > 0 ? 'ok' : 'err') + '"></span>' +
+            '<span class="history-method">' + e.method + '</span>' +
+            '<span class="history-url">' + e.url + '</span>' +
+            '<span class="history-status">' + (e.status || '—') + '</span>' +
+            '<span class="history-ms">' + e.ms + 'ms</span>' +
+          '</div>'
+        ).join('');
+    }
+
+    function viewHist(i) {
+      activeIdx = i;
+      showResponse(hist[i]);
+      renderHistory();
+    }
+
+    function clearHistory() {
+      hist.length = 0;
+      activeIdx = -1;
+      document.getElementById('responseViewer').innerHTML =
+        '<div class="empty-state"><div class="icon">📡</div><p>Make an API call to see the response here</p></div>';
+      document.getElementById('historyList').innerHTML = '';
+    }
+
+    /* ── core fetch wrapper ─────────────────── */
+    async function api(method, url, body) {
+      const t0 = performance.now();
+      try {
+        const opts = { method, credentials: 'include', headers: {} };
+        if (body) {
+          opts.headers['Content-Type'] = 'application/json';
+          opts.body = JSON.stringify(body);
+        }
+        const res = await fetch(url, opts);
+        const data = await res.json();
+        const ms = Math.round(performance.now() - t0);
+        const entry = { method, url, status: res.status, data, ms };
+        hist.unshift(entry);
+        activeIdx = 0;
+        showResponse(entry);
+        renderHistory();
+        toast(method + ' ' + url + ' → ' + res.status, res.ok);
+        return { data, status: res.status, ok: res.ok };
+      } catch (err) {
+        const ms = Math.round(performance.now() - t0);
+        const entry = { method, url, status: 0, data: { error: err.message }, ms };
+        hist.unshift(entry);
+        activeIdx = 0;
+        showResponse(entry);
+        renderHistory();
+        toast('Network error: ' + err.message, false);
+        return null;
+      }
+    }
+
+    /* ── auth handlers ──────────────────────── */
+    function handleRegister(e) {
+      e.preventDefault();
+      const name     = document.getElementById('reg-name').value;
+      const email    = document.getElementById('reg-email').value;
+      const password = document.getElementById('reg-pass').value;
+      api('POST', '/api/v1/user/register', { name, email, password });
+      return false;
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      const email    = document.getElementById('log-email').value;
+      const password = document.getElementById('log-pass').value;
+      api('POST', '/api/v1/user/login', { email, password });
+      return false;
+    }
+
+    function doLogout() { api('POST', '/api/v1/user/logout'); }
+    function getMe()    { api('GET',  '/api/v1/user/me'); }
+
+    /* ── todo handlers ──────────────────────── */
+    function handleCreateTodo(e) {
+      e.preventDefault();
+      const title       = document.getElementById('todo-title').value;
+      const description = document.getElementById('todo-desc').value;
+      api('POST', '/api/v1/todo/create', { title, description }).then(r => {
+        if (r && r.ok) {
+          document.getElementById('todo-title').value = '';
+          document.getElementById('todo-desc').value  = '';
+          fetchTodos();
+        }
+      });
+      return false;
+    }
+
+    async function fetchTodos() {
+      const page  = document.getElementById('todo-page').value  || 1;
+      const limit = document.getElementById('todo-limit').value || 10;
+      const r = await api('GET', '/api/v1/todo/all?page=' + page + '&limit=' + limit);
+      if (r && r.data && r.data.allTodos) renderTodos(r.data.allTodos);
+    }
+
+    async function deleteTodo(id) {
+      const r = await api('DELETE', '/api/v1/todo/delete/' + id);
+      if (r && r.ok) fetchTodos();
+    }
+
+    function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+    function renderTodos(list) {
+      const box = document.getElementById('todoList');
+      if (!list.length) {
+        box.innerHTML = '<div class="empty-state" style="height:110px"><p>No todos found</p></div>';
+        return;
+      }
+      box.innerHTML = list.map(t =>
+        '<div class="todo-item">' +
+          '<div class="todo-info">' +
+            '<div class="todo-title">' + esc(t.title) + '</div>' +
+            '<div class="todo-desc">'  + esc(t.description || '') + '</div>' +
+            '<div class="todo-meta">' +
+              '<span class="todo-id">#' + t.id + '</span>' +
+              '<span class="todo-badge ' + (t.completed ? 'badge-done' : 'badge-pending') + '">' +
+                (t.completed ? 'Done' : 'Pending') +
+              '</span>' +
+            '</div>' +
+          '</div>' +
+          '<button class="btn btn-sm btn-danger" onclick="deleteTodo(' + t.id + ')">Delete</button>' +
+        '</div>'
+      ).join('');
+    }
+  </script>
+</body>
+</html>

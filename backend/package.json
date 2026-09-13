@@ -5,8 +5,10 @@
   "main": "index.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
+    "dev2": "tsx watch src2-try/src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "db:push2": "drizzle-kit push --config src2-try/drizzle.config.ts"
   },
   "keywords": [],
   "author": "",
@@ -16,10 +18,12 @@
     "bcrypt": "^6.0.0",
     "cookie-parser": "^1.4.7",
     "drizzle-orm": "^0.45.2",
+    "drizzle-zod": "^0.8.3",
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.23.0",
-    "postgres": "^3.4.9"
+    "postgres": "^3.4.9",
+    "zod": "^4.6.2"
   },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
@@ -31,6 +35,6 @@
     "dotenv": "^17.4.2",
     "drizzle-kit": "^0.31.10",
     "tsx": "^4.23.13",
-    "typescipt": "^1.0.0"
+    "typescript": "^5.0.0"
   }
 }

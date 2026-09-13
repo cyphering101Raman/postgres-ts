@@ -1,6 +1,24 @@
 name: to-do-auth-postgre-ts
 
 services:
+  # ── Your Node.js Backend ───────────
+  app:
+    build: .
+    container_name: todo-app
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/mydb
+      JWT_SECRET: 12345@newnewnew
+      PORT: 3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    restart: unless-stopped
+
+
+  # ── PostgreSQL Database ───────────
   postgres:
     image: postgres:16
     container_name: postgres-heroic
@@ -12,6 +30,11 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
 volumes:
   postgres_data:
