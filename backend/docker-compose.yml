@@ -3,9 +3,9 @@ name: to-do-auth-postgre-ts
 services:
   # ── Your Node.js Backend ───────────
   app:
-    build: .
+    # build: .
     # # Replace this with your actual Docker Hub username and image name!
-    # image: ramangupta101/todo-backend:latest
+    image: ramangupta101/todo-backend:latest
     container_name: todo-app
     ports:
       - "3000:3000"
