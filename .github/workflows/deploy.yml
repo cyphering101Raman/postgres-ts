@@ -1,4 +1,4 @@
-name: Deploy to EC2
+name: Learning- Deploy to EC2/Dockerized
 
 on:
   push:
@@ -11,9 +11,18 @@ on:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.version.outputs.tag }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+
+      - name: Generate Version Tag
+        id: version
+        run: |
+          SHORT_SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          TAG="v${{ github.run_number }}-${SHORT_SHA}"
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -31,7 +40,7 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/todo-backend:latest
-            ${{ secrets.DOCKER_USERNAME }}/todo-backend:${{ github.sha }}
+            ${{ secrets.DOCKER_USERNAME }}/todo-backend:${{ steps.version.outputs.tag }}
 
   deploy:
     needs: build-and-push
@@ -62,7 +71,7 @@ jobs:
             cd ~/postgres-ts/backend
             
             # Safely update or append APP_VERSION in the .env file
-            grep -q "^APP_VERSION=" .env && sed -i "s/^APP_VERSION=.*/APP_VERSION=${{ github.sha }}/" .env || echo "APP_VERSION=${{ github.sha }}" >> .env
+            grep -q "^APP_VERSION=" .env && sed -i "s/^APP_VERSION=.*/APP_VERSION=${{ needs.build-and-push.outputs.image_tag }}/" .env || echo "APP_VERSION=${{ needs.build-and-push.outputs.image_tag }}" >> .env
             
             sudo docker compose pull
             sudo docker compose up -d
