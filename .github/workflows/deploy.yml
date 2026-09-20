@@ -29,12 +29,29 @@ jobs:
         with:
           context: ./backend
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/todo-backend:latest
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/todo-backend:latest
+            ${{ secrets.DOCKER_USERNAME }}/todo-backend:${{ github.sha }}
 
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
+      # 1. We need the code on the runner so we can copy the file
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 2. Securely copy docker-compose.yml to the EC2 server
+      - name: Copy docker-compose to EC2
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "backend/docker-compose.yml"
+          target: "~/postgres-ts/"
+
+      # 3. SSH in and run Docker commands (no git pull needed!)
       - name: Execute SSH Commands on EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -43,6 +60,10 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             cd ~/postgres-ts/backend
-            git pull origin main
+            
+            # Safely update or append APP_VERSION in the .env file
+            grep -q "^APP_VERSION=" .env && sed -i "s/^APP_VERSION=.*/APP_VERSION=${{ github.sha }}/" .env || echo "APP_VERSION=${{ github.sha }}" >> .env
+            
             sudo docker compose pull
             sudo docker compose up -d
+
